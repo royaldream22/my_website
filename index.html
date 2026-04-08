@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GMotionStudio — Налаштування маркетплейсів</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #2563EB;
+    --blue-light: #3B82F6;
+    --blue-pale: #EFF6FF;
+    --blue-glow: rgba(37,99,235,0.18);
+    --blue-glow2: rgba(59,130,246,0.10);
+    --bg: #F8FAFF;
+    --white: #ffffff;
+    --text: #0F1729;
+    --text-muted: #64748B;
+    --text-light: #94A3B8;
+    --border: rgba(37,99,235,0.13);
+    --shadow: 0 4px 32px rgba(37,99,235,0.10);
+    --shadow-lg: 0 16px 64px rgba(37,99,235,0.16);
+    --radius: 18px;
+    --radius-sm: 10px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* ---- CUSTOM CURSOR ---- */
+  #cursor-outer {
+    position: fixed; top: 0; left: 0;
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--blue);
+    border-radius: 50%;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%,-50%);
+    transition: width .25s, height .25s, background .2s, border-color .2s, box-shadow .2s;
+    will-change: transform;
+  }
+  #cursor-dot {
+    position: fixed; top: 0; left: 0;
+    width: 6px; height: 6px;
+    background: var(--blue);
+    border-radius: 50%;
+    pointer-events: none; z-index: 10000;
+    transform: translate(-50%,-50%);
+    transition: width .1s, height .1s;
+    will-change: transform;
+  }
+  body.cursor-hover #cursor-outer {
+    width: 56px; height: 56px;
+    background: rgba(37,99,235,0.07);
+    box-shadow: 0 0 20px rgba(37,99,235,0.22);
+    border-color: var(--blue-light);
+  }
+
+  /* ---- CANVAS BACKGROUND ---- */
+#bg-canvas {
+  position: fixed; 
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--bg);
+}
+  /* ---- FLOATING 3D ELEMENTS ---- */
+  .float-el {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.38;
+    transition: transform 0.12s ease-out;
+  }
+  .float-el svg { display: block; }
+
+  /* ---- MAIN LAYOUT ---- */
+  .page { position: relative; z-index: 2; }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 64px;
+    background: rgba(248,250,255,0.82);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+    transition: box-shadow .3s;
+  }
+  nav.scrolled { box-shadow: 0 4px 24px rgba(37,99,235,0.08); }
+  .nav-logo {
+    font-size: 17px; font-weight: 800;
+    letter-spacing: -0.5px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+    cursor: none;
+  }
+  .nav-logo span { color: var(--blue); }
+  .nav-logo-dot {
+    width: 8px; height: 8px; background: var(--blue);
+    border-radius: 50%; display: inline-block;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.4)} }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    font-size: 14px; font-weight: 500; color: var(--text-muted);
+    text-decoration: none; cursor: none;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--blue); }
+  .nav-cta {
+    background: var(--blue); color: white;
+    border: none; border-radius: 10px;
+    padding: 10px 22px; font-size: 14px; font-weight: 600;
+    cursor: none; font-family: 'Manrope', sans-serif;
+    transition: transform .2s, box-shadow .2s, background .2s;
+  }
+  .nav-cta:hover {
+    background: var(--blue-light);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37,99,235,0.28);
+  }
+/* ---- Анімація для логотипів (Исправлено) ---- */
+.mp-float {
+  opacity: 1; /* Делаем логотипы четкими по умолчанию */
+  transition: opacity 0.3s, transform 0.12s ease-out;
+  animation: flyAround 10s ease-in-out infinite; /* Немного замедлим полет */
+  pointer-events: auto; /* Разрешаем наведение курсора, чтобы работал :hover */
+}
+
+.mp-float:hover {
+  opacity: 1; /* При наведении — полная яркость */
+  transform: scale(1.1); /* Легкое увеличение */
+}
+
+/* Сама анімація м'якого польоту (зміна позиції та легке обертання) */
+@keyframes flyAround {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(20px, -20px) rotate(3deg); /* Летіти трохи вгору і вправо */
+  }
+  50% {
+    transform: translate(-15px, 15px) rotate(-2deg); /* Летіти вниз і вліво */
+  }
+  75% {
+    transform: translate(15px, -10px) rotate(1deg); /* Летіти вгору і вправо */
+  }
+}
+  /* ---- SECTIONS ---- */
+  section { padding: 100px 0; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 48px; } 
+
+  /* ---- HERO ---- */
+  #hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 140px 0 100px;
+    position: relative;
+  }
+  #hero .container {
+  max-width: 1600px; /* Только в этом блоке разрешаем ширину больше */
+}
+  .hero-inner {
+    display: grid; grid-template-columns: 1fr 1fr; /*разделяет окно на две колонки */
+    gap: 80px; align-items: center;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(37,99,235,0.08);
+    border: 1px solid rgba(37,99,235,0.18);
+    border-radius: 40px; padding: 6px 14px;
+    font-size: 12px; font-weight: 600;
+    color: var(--blue); letter-spacing: .04em;
+    text-transform: uppercase; margin-bottom: 28px;
+    opacity: 0; animation: fadeUp .7s .2s forwards;
+  }
+  .hero-badge-dot {
+    width: 6px; height: 6px; background: var(--blue);
+    border-radius: 50%; animation: pulse 2s infinite;
+  }
+  .hero-h1 {
+    font-size: clamp(42px, 5.5vw, 72px);
+    font-weight: 800; line-height: 1.06;
+    letter-spacing: -2.5px; color: var(--text);
+    margin-bottom: 24px;
+    opacity: 0; animation: fadeUp .7s .35s forwards;
+  }
+  .hero-h1 .accent { color: var(--blue); }
+  .hero-sub {
+    font-size: 18px; font-weight: 400;
+    color: var(--text-muted); line-height: 1.7;
+    max-width: 480px; margin-bottom: 36px;
+    opacity: 0; animation: fadeUp .7s .5s forwards;
+  }
+  .hero-tags {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    margin-bottom: 44px;
+    opacity: 0; animation: fadeUp .7s .62s forwards;
+  }
+  .tag {
+    background: white; border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    transition: border-color .2s, color .2s;
+  }
+  .tag:hover { border-color: var(--blue); color: var(--blue); }
+  .hero-btns {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    opacity: 0; animation: fadeUp .7s .75s forwards;
+  }
+  .btn-primary {
+    background: var(--blue); color: white;
+    border: none; border-radius: var(--radius-sm);
+    padding: 14px 28px; font-size: 15px; font-weight: 700;
+    cursor: none; font-family: 'Manrope', sans-serif;
+    transition: transform .2s, box-shadow .25s, background .2s;
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none;
+  }
+  .btn-primary:hover {
+    background: var(--blue-light);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 36px rgba(37,99,235,0.35);
+  }
+  .btn-secondary {
+    background: white; color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 28px; font-size: 15px; font-weight: 600;
+    cursor: none; font-family: 'Manrope', sans-serif;
+    transition: border-color .2s, color .2s, transform .2s, box-shadow .2s;
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none;
+  }
+  .btn-secondary:hover {
+    border-color: var(--blue); color: var(--blue);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+
+  /* Hero Visual Panel */
+  .hero-panel {
+    position: relative;
+    opacity: 0; animation: fadeLeft .9s .4s forwards;
+  }
+  .hero-card-main {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 28px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card-main::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--blue-light), transparent);
+  }
+  .hc-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px;
+  }
+  .hc-dots span {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; margin-right: 6px;
+  }
+  .hc-dots span:nth-child(1) { background: #FC5F5A; }
+  .hc-dots span:nth-child(2) { background: #FBBD2C; }
+  .hc-dots span:nth-child(3) { background: #26C940; }
+  .hc-title { font-size: 13px; font-weight: 600; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .hc-feed {
+    background: #F1F5FF;
+    border-radius: 12px; padding: 16px;
+    margin-bottom: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; line-height: 1.8;
+    color: var(--text-muted);
+  }
+  .hc-feed .kw { color: var(--blue); font-weight: 600; }
+  .hc-feed .val { color: #0F766E; }
+  .hc-feed .str { color: #9333EA; }
+  .hc-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .hc-stat {
+    background: var(--blue-pale);
+    border-radius: 10px; padding: 12px;
+    text-align: center;
+  }
+  .hc-stat-num {
+    font-size: 22px; font-weight: 800; color: var(--blue);
+    letter-spacing: -1px;
+  }
+  .hc-stat-lbl { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+  .hero-mini-card {
+    position: absolute;
+    background: white; border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 16px;
+    box-shadow: 0 8px 32px rgba(37,99,235,0.14);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 600; color: var(--text);
+    white-space: nowrap;
+  }
+  .hero-mc-1 { top: -18px; right: 30px; animation: float1 5s ease-in-out infinite; z-index: 999; position: absolute; }
+  .hero-mc-2 { bottom: -18px; left: 10px; animation: float2 6s ease-in-out infinite; }
+  .mc-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .mc-icon.green { background: #DCFCE7; }
+  .mc-icon.orange { background: #FFF7ED; }
+
+  @keyframes float1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeLeft { from{opacity:0;transform:translateX(32px)} to{opacity:1;transform:translateX(0)} }
+
+  /* ---- SECTION HEADER ---- */
+  .section-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; color: var(--blue);
+    text-transform: uppercase; letter-spacing: .1em;
+    margin-bottom: 16px;
+  }
+  .section-label::before {
+    content: ''; width: 18px; height: 2px; background: var(--blue);
+    display: inline-block;
+  }
+  .section-h2 {
+    font-size: clamp(30px, 4vw, 48px);
+    font-weight: 800; letter-spacing: -1.5px;
+    line-height: 1.1; color: var(--text);
+    margin-bottom: 16px;
+  }
+  .section-h2 .accent { color: var(--blue); }
+  .section-sub {
+    font-size: 17px; color: var(--text-muted);
+    line-height: 1.7; max-width: 560px;
+    margin-bottom: 60px;
+  }
+
+  /* ---- WHO FOR ---- */
+  #for { background: white; }
+  .cards-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+    cursor: none;
+    position: relative; overflow: hidden;
+  }
+  .card::after {
+    content: ''; position: absolute;
+    inset: 0; border-radius: var(--radius);
+    background: linear-gradient(135deg, rgba(37,99,235,0.04), transparent);
+    opacity: 0; transition: opacity .25s;
+  }
+  .card:hover {
+    transform: translateY(-5px) scale(1.012);
+    box-shadow: 0 20px 60px rgba(37,99,235,0.14);
+    border-color: rgba(37,99,235,0.3);
+  }
+  .card:hover::after { opacity: 1; }
+  .card-icon {
+    width: 52px; height: 52px;
+    background: var(--blue-pale);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px; font-size: 22px;
+    transition: background .2s, transform .2s;
+  }
+  .card:hover .card-icon { background: rgba(37,99,235,0.12); transform: scale(1.08); }
+  .card-h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: -.4px; }
+  .card-p { font-size: 15px; color: var(--text-muted); line-height: 1.65; }
+
+  /* ---- PROBLEMS ---- */
+  #problems { background: var(--bg); }
+  .problems-grid {
+    display: grid; grid-template-columns: repeat(2,1fr);
+    gap: 18px; margin-bottom: 48px;
+  }
+  .problem-item {
+    background: white; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 22px 24px;
+    display: flex; gap: 16px; align-items: flex-start;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .problem-item:hover { border-color: rgba(37,99,235,0.28); box-shadow: var(--shadow); }
+  .prob-icon { font-size: 20px; margin-top: 2px; flex-shrink: 0; }
+  .prob-text h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .prob-text p { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+  .problems-cta {
+    background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+    border: 1px solid rgba(37,99,235,0.18);
+    border-radius: var(--radius); padding: 32px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+  }
+  .problems-cta p {
+    font-size: 18px; font-weight: 600; color: var(--text);
+    line-height: 1.5; max-width: 560px;
+  }
+  .problems-cta p span { color: var(--blue); }
+
+  /* ---- SERVICES ---- */
+  #services { background: white; }
+  .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-bottom: 36px; }
+  .service-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px;
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+    cursor: none; position: relative; overflow: hidden;
+  }
+  .service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(37,99,235,0.13);
+    border-color: rgba(37,99,235,0.28);
+  }
+  .service-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; font-weight: 500; color: var(--blue);
+    margin-bottom: 14px; letter-spacing: .08em;
+  }
+  .service-icon { font-size: 28px; margin-bottom: 14px; }
+  .service-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.3px; }
+  .service-card p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+  .services-promise {
+    background: var(--text); color: white;
+    border-radius: var(--radius); padding: 24px 32px;
+    display: flex; align-items: center; gap: 16px;
+    font-size: 16px; font-weight: 600; line-height: 1.5;
+  }
+  .services-promise span { color: var(--blue-light); }
+  .promise-dot {
+    width: 20px; height: 20px; background: var(--blue-light);
+    border-radius: 70%; flex-shrink: 0; animation: pulse 2s infinite;
+  }
+
+  /* ---- PROCESS ---- */
+  #process { background: var(--bg); }
+  .process-steps {
+    display: flex; align-items: flex-start;
+    gap: 0; position: relative; margin-top: 60px;
+  }
+  .process-steps::before {
+    content: ''; position: absolute;
+    top: 28px; left: 28px; right: 28px; height: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--blue-light), rgba(37,99,235,0.2));
+    z-index: 0;
+  }
+  .step {
+    flex: 1; text-align: center; position: relative; z-index: 1;
+    padding: 0 12px;
+  }
+  .step-num {
+    width: 56px; height: 56px;
+    background: white; border: 2px solid var(--blue);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 16px; font-weight: 800; color: var(--blue);
+    font-family: 'DM Mono', monospace;
+    box-shadow: 0 0 0 6px rgba(37,99,235,0.08);
+    transition: background .2s, color .2s, box-shadow .2s;
+  }
+  .step:hover .step-num {
+    background: var(--blue); color: white;
+    box-shadow: 0 0 0 8px rgba(37,99,235,0.12);
+  }
+  .step h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; letter-spacing: -.2px; }
+  .step p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ---- RESULTS ---- */
+  #results { background: white; }
+  .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .result-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 30px;
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+    cursor: none;
+  }
+  .result-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(37,99,235,0.12);
+    border-color: rgba(37,99,235,0.28);
+  }
+  .result-icon { font-size: 30px; margin-bottom: 16px; }
+  .result-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.3px; }
+  .result-card p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+  /* ---- AUDIT SECTION ---- */
+  #audit { background: var(--bg); }
+  .audit-inner {
+    background: linear-gradient(135deg, var(--text) 0%, #1E3A8A 100%);
+    border-radius: 28px; padding: 72px 80px;
+    position: relative; overflow: hidden;
+  }
+  .audit-inner::before {
+    content: ''; position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(59,130,246,0.2), transparent 70%);
+  }
+  .audit-inner::after {
+    content: ''; position: absolute;
+    bottom: -60px; left: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(37,99,235,0.15), transparent 70%);
+  }
+  .audit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; position: relative; z-index: 1; }
+  .audit-left .section-label { color: var(--blue-light); }
+  .audit-left .section-label::before { background: var(--blue-light); }
+  .audit-h2 {
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 800; color: white;
+    letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 16px;
+  }
+  .audit-sub { font-size: 16px; color: rgba(255,255,255,.65); line-height: 1.7; }
+  .audit-form { display: flex; flex-direction: column; gap: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-input {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 10px; padding: 14px 18px;
+    font-size: 14px; color: white;
+    font-family: 'Manrope', sans-serif;
+    outline: none;
+    transition: border-color .2s, background .2s;
+    cursor: none;
+  }
+  .form-input::placeholder { color: rgba(255,255,255,.35); }
+  .form-input:focus {
+    border-color: var(--blue-light);
+    background: rgba(255,255,255,.12);
+  }
+  textarea.form-input { resize: none; height: 90px; }
+  .btn-audit {
+    background: var(--blue-light); color: white;
+    border: none; border-radius: 10px;
+    padding: 14px 28px; font-size: 15px; font-weight: 700;
+    cursor: none; font-family: 'Manrope', sans-serif;
+    transition: transform .2s, box-shadow .2s, background .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-audit:hover {
+    background: var(--blue);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(37,99,235,0.5);
+  }
+  .form-note { font-size: 12px; color: rgba(255,255,255,.35); text-align: center; }
+
+  /* ---- MARKETPLACES ---- */
+  #marketplaces { background: white; }
+  .mp-logos {
+    display: flex; align-items: center; justify-content: center;
+    gap: 48px; flex-wrap: wrap; margin-top: 48px;
+  }
+  .mp-logo {
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px 36px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 16px;
+    font-size: 18px; font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: -0.5px;
+    transition: border-color .2s, color .2s, transform .2s, box-shadow .2s;
+    cursor: none; min-width: 140px;
+  }
+  .mp-logo:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 12px 36px rgba(37,99,235,0.14);
+  }
+  .mp-logo .mp-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; display: inline-block; }
+
+  /* ---- FOOTER ---- */
+  footer {
+    background: var(--text);
+    padding: 48px 0;
+  }
+  .footer-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px;
+  }
+  .footer-logo { font-size: 16px; font-weight: 800; color: white; letter-spacing: -.5px; }
+  .footer-logo span { color: var(--blue-light); }
+  .footer-desc { font-size: 13px; color: rgba(255,255,255,.4); margin-top: 6px; }
+  .footer-links { display: flex; gap: 28px; }
+  .footer-link {
+    display: flex; align-items: center; gap: 8px;
+    color: rgba(255,255,255,.6); font-size: 14px; font-weight: 500;
+    text-decoration: none; cursor: none;
+    transition: color .2s;
+  }
+  .footer-link:hover { color: var(--blue-light); }
+  .footer-link-icon { font-size: 16px; }
+
+  /* ---- SCROLL ANIMATIONS ---- */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s, transform .7s; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .reveal-delay-1 { transition-delay: .1s; }
+  .reveal-delay-2 { transition-delay: .2s; }
+  .reveal-delay-3 { transition-delay: .3s; }
+  .reveal-delay-4 { transition-delay: .4s; }
+  .reveal-delay-5 { transition-delay: .5s; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    .container { padding: 0 24px; }
+    .hero-inner, .audit-grid { grid-template-columns: 1fr; gap: 48px; }
+    .cards-3, .services-grid, .results-grid { grid-template-columns: 1fr; }
+    .problems-grid { grid-template-columns: 1fr; }
+    .process-steps { flex-direction: column; gap: 24px; }
+    .process-steps::before { display: none; }
+    .audit-inner { padding: 40px 28px; }
+    .form-row { grid-template-columns: 1fr; }
+    .footer-inner { flex-direction: column; text-align: center; }
+    section { padding: 72px 0; }
+  }
+  /* Стиль самой волны */
+.ripple-wave {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.4) 0%, transparent 70%);
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple-animation 0.8s ease-out;
+  z-index: 10;
+}
+
+@keyframes ripple-animation {
+  from {
+    transform: scale(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(4); /* Насколько широко расходится волна */
+    opacity: 0;
+  }
+}
+
+/* Важно: чтобы волна не вылетала за края кнопки/карточки */
+.hover-el {
+  position: relative;
+  overflow: hidden;
+}
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div id="cursor-outer"></div>
+<div id="cursor-dot"></div>
+
+<!-- Background Canvas -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Floating 3D Elements -->
+<div class="float-el" id="fe1" style="top:15%;left:5%;width:60px;height:60px;">
+  <svg viewBox="0 0 60 60"><g transform="translate(30,30)"><rect x="-18" y="-18" width="36" height="36" rx="6" fill="none" stroke="rgba(37,99,235,0.35)" stroke-width="1.5" transform="rotate(20)"/><rect x="-12" y="-12" width="24" height="24" rx="4" fill="rgba(37,99,235,0.08)" stroke="rgba(59,130,246,0.3)" stroke-width="1" transform="rotate(20)"/></g></svg>
+</div>
+<div class="float-el" id="fe2" style="top:40%;right:3%;width:50px;height:50px;">
+  <svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="18" fill="none" stroke="rgba(37,99,235,0.28)" stroke-width="1.5" stroke-dasharray="4 3"/><circle cx="25" cy="25" r="8" fill="rgba(37,99,235,0.08)"/></svg>
+</div>
+<div class="float-el" id="fe3" style="top:65%;left:2%;width:70px;height:70px;">
+  <svg viewBox="0 0 70 70"><polygon points="35,5 65,55 5,55" fill="none" stroke="rgba(37,99,235,0.22)" stroke-width="1.5"/><polygon points="35,18 54,50 16,50" fill="rgba(37,99,235,0.06)"/></svg>
+</div>
+<div class="float-el" id="fe4" style="top:25%;right:8%;width:40px;height:40px;">
+  <svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="8" fill="none" stroke="rgba(59,130,246,0.3)" stroke-width="1.5"/><rect x="12" y="12" width="16" height="16" rx="4" fill="rgba(37,99,235,0.1)"/></svg>
+</div>
+<div class="float-el" id="fe5" style="top:55%;right:5%;width:55px;height:55px;">
+  <svg viewBox="0 0 55 55"><line x1="27" y1="5" x2="27" y2="50" stroke="rgba(37,99,235,0.2)" stroke-width="1.5"/><line x1="5" y1="27" x2="50" y2="27" stroke="rgba(37,99,235,0.2)" stroke-width="1.5"/><circle cx="27" cy="27" r="20" fill="none" stroke="rgba(37,99,235,0.22)" stroke-width="1.5" stroke-dasharray="3 4"/></svg>
+</div>
+<div class="float-el" id="fe6" style="top:80%;left:8%;width:45px;height:45px;">
+  <svg viewBox="0 0 45 45"><rect x="5" y="5" width="35" height="35" rx="10" fill="none" stroke="rgba(37,99,235,0.28)" stroke-width="1.5" transform="rotate(12,22,22)"/></svg>
+</div>
+<div class="float-el mp-float" id="logof1" style="top:20%; left:85%; width:100px; height:auto; animation-delay: 0s; z-index: 5;">
+  <img src="logo-rozetka.svg" alt="Rozetka" style="width:100%; height:auto; opacity: 0.9;">
+</div>
+<div class="float-el mp-float" id="logof2" style="top:75%; right:45%; width:200px; height:auto; animation-delay: 1.5s; z-index: 5;">
+  <img src="logo-prom.png" alt="Prom" style="width:100%; height:auto; opacity: 0.8;">
+</div>
+<div class="float-el mp-float" id="logof3" style="top:85%; left:70%; width:220px; height:auto; animation-delay: 3s; z-index: 5;">
+  <img src="logo-allo.svg" alt="Allo" style="width:100%; height:auto; opacity: 0.95;">
+</div>
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">
+    <span class="nav-logo-dot"></span>
+    GMotoin<span>Studio</span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#for" class="hover-el">Для кого</a></li>
+    <li><a href="#services" class="hover-el">Послуги</a></li>
+    <li><a href="#process" class="hover-el">Процес</a></li>
+    <li><a href="#audit" class="hover-el">Безкоштовний аудит</a></li>
+  </ul>
+  <button class="nav-cta hover-el" onclick="document.getElementById('audit').scrollIntoView({behavior:'smooth'})">Отримати безкоштовний аудит</button>
+</nav>
+
+<div class="page">
+
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="hero-badge"><span class="hero-badge-dot"></span>Експерт маркетплейсів</div>
+        <h1 class="hero-h1">Запуск та маштабування на<br>маркетплейсах:<br><span class="accent">від технічних налаштувань до перших продажів</span></h1>
+        <p class="hero-sub">Підготовка та публікація ваших товарів на маркетплейсах — від сирих даних до повністю розміщених оголошень.</p>
+        <div class="hero-tags">
+          <span class="tag hover-el">XML-фіди</span>
+          <span class="tag hover-el">Імпорт Excel</span>
+          <span class="tag hover-el">SEO-оголошення</span>
+          <span class="tag hover-el">Підготовка фото</span>
+          <span class="tag hover-el">Модерація</span>
+        </div>
+        <div class="hero-btns">
+          <a href="#audit" class="btn-primary hover-el">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Отримати безкоштовний аудит
+          </a>
+          <a href="#process" class="btn-secondary hover-el">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4V8z" fill="currentColor"/></svg>
+            Як це працює
+          </a>
+        </div>
+      </div>
+      <div class="hero-panel">
+        <div class="hero-mini-card hero-mc-1">
+          <div class="mc-icon green">✅</div>
+          <div><div style="font-size:11px;color:var(--text-muted)">Статус</div>Товар схвалено</div>
+        </div>
+        <div class="hero-card-main">
+          <div class="hc-header">
+            <div class="hc-dots"><span></span><span></span><span></span></div>
+            <div class="hc-title">product_feed.xml</div>
+          </div>
+          <div class="hc-feed">
+            <span class="kw">&lt;offer</span> <span class="val">id</span>=<span class="str">"4821"</span><span class="kw">&gt;</span><br>
+            &nbsp;&nbsp;<span class="kw">&lt;name&gt;</span>Nike Air Max 270<span class="kw">&lt;/name&gt;</span><br>
+            &nbsp;&nbsp;<span class="kw">&lt;price&gt;</span><span class="val">3499</span><span class="kw">&lt;/price&gt;</span><br>
+            &nbsp;&nbsp;<span class="kw">&lt;categoryId&gt;</span><span class="val">125</span><span class="kw">&lt;/categoryId&gt;</span><br>
+            &nbsp;&nbsp;<span class="kw">&lt;picture&gt;</span><span class="str">img/p4821.jpg</span><span class="kw">&lt;/picture&gt;</span><br>
+            <span class="kw">&lt;/offer&gt;</span>
+          </div>
+          <div class="hc-stats">
+            <div class="hc-stat"><div class="hc-stat-num">2.4K</div><div class="hc-stat-lbl">Товарів</div></div>
+            <div class="hc-stat"><div class="hc-stat-num">100%</div><div class="hc-stat-lbl">Схвалено</div></div>
+            <div class="hc-stat"><div class="hc-stat-num">+38%</div><div class="hc-stat-lbl">Видимість</div></div>
+          </div>
+        </div>
+        <div class="hero-mini-card hero-mc-2">
+          <div class="mc-icon orange">📦</div>
+          <div><div style="font-size:11px;color:var(--text-muted)">Завантаження</div>2&nbsp;418 товарів активно</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROBLEMS ===== -->
+<section id="problems">
+  <div class="container">
+    <div class="reveal"><span class="section-label">Типові проблеми</span></div>
+    <h2 class="section-h2 reveal reveal-delay-1">Чому ваші товари <span class="accent">досі не продаються</span><br>на маркетплейсах</h2>
+    <p class="section-sub reveal reveal-delay-2">Більшість продавців втрачають продажі не через якість товару, а через технічні проблеми, яких можна повністю уникнути.</p>
+    <div class="problems-grid reveal reveal-delay-2">
+      <div class="problem-item hover-el">
+        <div class="prob-icon">🚫</div>
+        <div class="prob-text">
+          <h4>Товари відхилені модерацією</h4>
+          <p>Невірні атрибути, відсутні обов'язкові поля або неправильна категорія призводять до автоматичного відхилення — часто без чіткого пояснення.</p>
+        </div>
+      </div>
+      <div class="problem-item hover-el">
+        <div class="prob-icon">⚠️</div>
+        <div class="prob-text">
+          <h4>Некоректні XML / Excel-фіди</h4>
+          <p>Неправильна структура фіду, неправильне кодування або відсутні поля унеможливлюють успішний імпорт товарів.</p>
+        </div>
+      </div>
+      <div class="problem-item hover-el">
+        <div class="prob-icon">🔍</div>
+        <div class="prob-text">
+          <h4>Погані SEO-заголовки та описи</h4>
+          <p>Загальний або неякісний контент означає, що товари з'являються значно нижче конкурентів у результатах пошуку маркетплейсу.</p>
+        </div>
+      </div>
+      <div class="problem-item hover-el">
+        <div class="prob-icon">📸</div>
+        <div class="prob-text">
+          <h4>Низький CTR через зображення</h4>
+          <p>Невірні розміри фото, поганий фон або низька якість зображень зменшують кількість кліків та суттєво знижують конверсію.</p>
+        </div>
+      </div>
+      <div class="problem-item hover-el">
+        <div class="prob-icon">🔧</div>
+        <div class="prob-text">
+          <h4>Складний процес завантаження</h4>
+          <p>Кожен маркетплейс має унікальні вимоги, формати та правила, що часто змінюються — важко встигати без виділеної експертизи.</p>
+        </div>
+      </div>
+      <div class="problem-item hover-el">
+        <div class="prob-icon">📉</div>
+        <div class="prob-text">
+          <h4>Низька видимість та рейтинг</h4>
+          <p>Товари без належної оптимізації опиняються на 10+ сторінці та отримують мінімум органічного трафіку й продажів.</p>
+        </div>
+      </div>
+    </div>
+    <div class="problems-cta reveal">
+      <p>Я вирішую ці технічні проблеми та готую ваш магазин до <span>успішних продажів на маркетплейсах.</span></p>
+      <a href="#audit" class="btn-primary hover-el" style="white-space:nowrap;">
+        Виправити мої оголошення
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== WHO FOR ===== -->
+<section id="for">
+  <div class="container">
+    <div class="reveal"><span class="section-label">Для кого це</span></div>
+    <h2 class="section-h2 reveal reveal-delay-1">Рішення для виробників <span class="accent"><br>та амбітних магазинів</span>
+    <p class="section-sub reveal reveal-delay-2">Незалежно від того, чи ви тільки починаєте, чи масштабуєтесь — ми беремо на себе технічну складність розміщення товарів на маркетплейсах.</p>
+    <div class="cards-3">
+      <div class="card hover-el reveal reveal-delay-1">
+        <div class="card-icon">🛒</div>
+        <h3 class="card-h3">Інтернет-магазини</h3>
+        <p class="card-p">Бізнеси, що виводять товари на маркетплейси та потребують правильного технічного налаштування, коректних категорій і SEO-оптимізованих оголошень з першого дня.</p>
+      </div>
+      <div class="card hover-el reveal reveal-delay-2">
+        <div class="card-icon">📊</div>
+        <h3 class="card-h3">Продавці маркетплейсів</h3>
+        <p class="card-p">Магазини, що стикаються з відмовами модерації, низькою видимістю або некоректно відформатованими даними, через які товари не відображаються.</p>
+      </div>
+      <div class="card hover-el reveal reveal-delay-3">
+        <div class="card-icon">🏭</div>
+        <h3 class="card-h3">Бренди та постачальники</h3>
+        <p class="card-p">Компанії, яким потрібно масштабно завантажити товари через XML-фіди — тисячі SKU розміщуються коректно та ефективно.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SERVICES ===== -->
+<section id="services">
+  <div class="container">
+    <div class="reveal"><span class="section-label">Послуги</span></div>
+    <h2 class="section-h2 reveal reveal-delay-1">Усе необхідне для<br><span class="accent">запуску та зростання</span></h2>
+    <p class="section-sub reveal reveal-delay-2">Повний стек технічних послуг, що охоплює кожен крок процесу запуску на маркетплейсі.</p>
+    <div class="services-grid">
+      <div class="service-card hover-el reveal reveal-delay-1">
+        <div class="service-num">01</div>
+        <div class="service-icon">🗂️</div>
+        <h3>Структурування даних про товари</h3>
+        <p>Підготовка атрибутів, категорій і товарних ієрархій відповідно до вимог маркетплейсу.</p>
+      </div>
+      <div class="service-card hover-el reveal reveal-delay-2">
+        <div class="service-num">02</div>
+        <div class="service-icon">⚙️</div>
+        <h3>Підготовка XML та Excel-фідів</h3>
+        <p>Створення структурованих, валідних файлів імпорту, що проходять перевірку маркетплейсу без помилок з першого разу.</p>
+      </div>
+      <div class="service-card hover-el reveal reveal-delay-3">
+        <div class="service-num">03</div>
+        <div class="service-icon">🔍</div>
+        <h3>SEO-оптимізація</h3>
+        <p>Розробка оптимізованих заголовків і описів, що займають високі позиції у пошуку маркетплейсу та привертають покупців.</p>
+      </div>
+      <div class="service-card hover-el reveal reveal-delay-1">
+        <div class="service-num">04</div>
+        <div class="service-icon">🖼️</div>
+        <h3>Підготовка зображень товарів</h3>
+        <p>Фото у правильних розмірах, форматах та з оптимізацією для проходження модерації і максимізації CTR.</p>
+      </div>
+      <div class="service-card hover-el reveal reveal-delay-2">
+        <div class="service-num">05</div>
+        <div class="service-icon">✅</div>
+        <h3>Підтримка при модерації</h3>
+        <p>Активне виправлення відхилених оголошень і вирішення питань модерації до повного схвалення кожного товару.</p>
+      </div>
+      <div class="service-card hover-el reveal reveal-delay-3">
+        <div class="service-num">06</div>
+        <div class="service-icon">🚀</div>
+        <h3>Повний запуск на маркетплейсі</h3>
+        <p>Публікація товарів, перевірка оголошень і підтвердження, що все активно та відображається коректно.</p>
+      </div>
+    </div>
+    <div class="services-promise reveal">
+      <div class="promise-dot"></div>
+      <p>Ми працюємо до кінцевого результату — коли ваші товари <span>вже активні на маркетплейсі.</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROCESS ===== -->
+<section id="process">
+  <div class="container">
+    <div style="text-align:center;">
+      <div class="reveal"><span class="section-label">Як це працює</span></div>
+      <h2 class="section-h2 reveal reveal-delay-1" style="text-align:center;">Від сирих даних до<br><span class="accent">активних оголошень</span></h2>
+      <p class="section-sub reveal reveal-delay-2" style="margin:0 auto 0;">Чіткий, структурований процес для якнайшвидшої публікації ваших товарів.</p>
+    </div>
+    <div class="process-steps reveal">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h4>Технічний аналіз</h4>
+        <p>Вивчаю ваші товари та вимоги маркетплейсу, щоб зрозуміти, як виділити вас серед конкурентів.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h4>Підготовка даних </h4>
+        <p>Перетворюю ваші прайси та списки у правильний формат. Виправляю помилки у характеристиках.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h4>Налаштування карток</h4>
+        <p>ССтворюю назви та описи, які допоможуть покупцям швидше знаходити ваші товари через пошук.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h4>Завантаження та модерація</h4>
+        <p>Завантаження товарів і вирішення будь-яких питань модерації</p>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <h4>Магазин готовий</h4>
+        <p>Ваші товари активні, перевірені та готові до продажів</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== RESULTS ===== -->
+<section id="results">
+  <div class="container">
+    <div class="reveal"><span class="section-label">Результати</span></div>
+    <h2 class="section-h2 reveal reveal-delay-1">Що ви отримуєте<br><span class="accent">у підсумку</span></h2>
+    <p class="section-sub reveal reveal-delay-2">Конкретні, вимірювані результати, що безпосередньо впливають на ваш дохід від маркетплейсу.</p>
+    <div class="results-grid">
+      <div class="result-card hover-el reveal reveal-delay-1">
+        <div class="result-icon">📦</div>
+        <h3>Товари успішно опубліковано</h3>
+        <p>Кожен товар проходить модерацію та коректно відображається в каталозі маркетплейсу з усіма необхідними атрибутами.</p>
+      </div>
+      <div class="result-card hover-el reveal reveal-delay-2">
+        <div class="result-icon">🔎</div>
+        <h3>Оптимізовано для пошуку</h3>
+        <p>Оголошення, що займають високі позиції у внутрішньому пошуку маркетплейсу та залучають органічний трафік без платної реклами.</p>
+      </div>
+      <div class="result-card hover-el reveal reveal-delay-3">
+        <div class="result-icon">📈</div>
+        <h3>Вища видимість на маркетплейсі</h3>
+        <p>Правильне розміщення в категоріях і SEO забезпечують більше показів, кліків і конверсій.</p>
+      </div>
+      <div class="result-card hover-el reveal reveal-delay-1">
+        <div class="result-icon">🎯</div>
+        <h3>Професійна презентація</h3>
+        <p>Акуратні картки товарів, правильні зображення та переконливі описи, що формують довіру покупців.</p>
+      </div>
+      <div class="result-card hover-el reveal reveal-delay-2">
+        <div class="result-icon">⚡</div>
+        <h3>Масштабована система імпорту</h3>
+        <p>Правильно структурований XML/Excel-пайплайн для швидкого завантаження тисяч нових товарів.</p>
+      </div>
+      <div class="result-card hover-el reveal reveal-delay-3">
+        <div class="result-icon">🛡️</div>
+        <h3>Стабільне проходження модерації</h3>
+        <p>Оголошення, побудовані так, щоб залишатися схваленими — менше відхилень і проблем з обслуговуванням у майбутньому.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AUDIT ===== -->
+<section id="audit">
+  <div class="container">
+    <div class="audit-inner">
+      <div class="audit-grid">
+        <div class="audit-left">
+          <span class="section-label">Безкоштовний аудит</span>
+          <h2 class="audit-h2">Отримайте безкоштовний<br>аудит оголошень</h2>
+          <p class="audit-sub">Я перегляну кілька ваших товарів і визначу технічні проблеми, що впливають на ефективність маркетплейсу — абсолютно безкоштовно, без жодних зобов'язань.</p>
+          <div style="margin-top:32px;display:flex;gap:20px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;background:rgba(255,255,255,.08);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;">⚡</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.65);">Відповідь протягом 24 год</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;background:rgba(255,255,255,.08);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;">🎯</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.65);">Конкретні практичні рекомендації</div>
+            </div>
+          </div>
+        </div>
+        <div class="audit-right">
+ <form class="audit-form" name="audit-form" method="POST" data-netlify="true">
+  <input type="hidden" name="form-name" value="audit-form" />
+
+<div class="form-row">
+  <input type="text" name="name" class="form-input hover-el" placeholder="Ваше ім'я" required>
+  <input type="text" name="contact" class="form-input hover-el" placeholder="Email, Telegram або Телефон" required>
+</div>
+
+  <input type="url" name="shop-link" class="form-input hover-el" placeholder="Посилання на ваш магазин на маркетплейсі" required>
+  
+  <textarea name="message" class="form-input hover-el" placeholder="Опишіть вашу ситуацію або конкретні проблеми..."></textarea>
+  
+  <button type="submit" class="btn-audit hover-el">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    Замовити безкоштовний аудит
+  </button>
+  
+  <p class="form-note">Без спаму. Ваші дані в безпеці. Я відповім особисто.</p>
+</form>         
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MARKETPLACES ===== -->
+<section id="marketplaces">
+  <div class="container" style="text-align:center;">
+    <div class="reveal"><span class="section-label">Платформи</span></div>
+    <h2 class="section-h2 reveal reveal-delay-1">Маркетплейси, з якими<br><span class="accent">я працюю</span></h2>
+    <p class="section-sub reveal reveal-delay-2" style="margin: 0 auto 0;">Глибока експертиза у вимогах українських маркетплейсів та їхніх унікальних технічних специфікаціях.</p>
+    <div class="mp-logos reveal">
+      <div class="mp-logo hover-el">
+        <span class="mp-dot" style="background:#FF6600;"></span>
+        Rozetka
+      </div>
+      <div class="mp-logo hover-el">
+        <span class="mp-dot" style="background:#F05A28;"></span>
+        Prom
+      </div>
+      <div class="mp-logo hover-el">
+        <span class="mp-dot" style="background:#E31E24;"></span>
+        Epicentr
+      </div>
+      <div class="mp-logo hover-el">
+        <span class="mp-dot" style="background:#8B5CF6;"></span>
+        Kasta
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-logo">GMotion<span>Studio</span></div>
+        <div class="footer-desc">Технічне налаштування та запуск товарів на маркетплейсах.</div>
+      </div>
+      <div class="footer-links">
+        <a href="mailto:hello@marketlaunch.ua" class="footer-link hover-el">
+          <span class="footer-link-icon">Email: ✉️</span>
+          yaroslav@gmotion.studio
+        </a>
+        <a href="https://t.me/grafmotion" class="footer-link hover-el">
+          <span class="footer-link-icon">Telegram </span>
+          
+          @grafmotion
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</div><!-- /.page -->
+
+<script>
+// ---- CURSOR ----
+const outerCursor = document.getElementById('cursor-outer');
+const dotCursor = document.getElementById('cursor-dot');
+let mx = window.innerWidth/2, my = window.innerHeight/2;
+let ox = mx, oy = my;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  dotCursor.style.left = mx + 'px';
+  dotCursor.style.top = my + 'px';
+});
+
+function animateCursor() {
+  ox += (mx - ox) * 0.18;
+  oy += (my - oy) * 0.18;
+  outerCursor.style.left = ox + 'px';
+  outerCursor.style.top = oy + 'px';
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+document.querySelectorAll('.hover-el, a, button, input, textarea, .card, .service-card, .result-card, .mp-logo').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+});
+
+// ---- NAVBAR SCROLL ----
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// ---- FLOATING ELEMENTS PARALLAX ----
+const floatEls = [
+  { el: document.getElementById('fe1'), speedX: 0.015, speedY: 0.02 },
+  { el: document.getElementById('fe2'), speedX: -0.018, speedY: 0.015 },
+  { el: document.getElementById('fe3'), speedX: 0.012, speedY: -0.02 },
+  { el: document.getElementById('fe4'), speedX: -0.02, speedY: 0.018 },
+  { el: document.getElementById('fe5'), speedX: 0.016, speedY: -0.016 },
+  { el: document.getElementById('fe6'), speedX: -0.014, speedY: 0.022 },
+];
+let floatOffsets = floatEls.map(() => ({ x: 0, y: 0 }));
+let cmx = window.innerWidth/2, cmy = window.innerHeight/2;
+let prevCmx = cmx, prevCmy = cmy;
+
+document.addEventListener('mousemove', e => { cmx = e.clientX; cmy = e.clientY; });
+
+let rotAngles = floatEls.map(() => Math.random() * 360);
+let rotSpeeds = floatEls.map(() => (Math.random() - 0.5) * 0.2);
+let floatT = floatEls.map(() => Math.random() * 100);
+
+function animateFloats() {
+  const cx = (cmx - window.innerWidth/2);
+  const cy = (cmy - window.innerHeight/2);
+  floatEls.forEach((fe, i) => {
+    if (!fe.el) return;
+    floatT[i] += 0.008;
+    rotAngles[i] += rotSpeeds[i];
+    const tx = cx * fe.speedX;
+    const ty = cy * fe.speedY + Math.sin(floatT[i]) * 8;
+    floatOffsets[i].x += (tx - floatOffsets[i].x) * 0.05;
+    floatOffsets[i].y += (ty - floatOffsets[i].y) * 0.05;
+    fe.el.style.transform = `translate(${floatOffsets[i].x}px, ${floatOffsets[i].y}px) rotate(${rotAngles[i]}deg)`;
+  });
+  requestAnimationFrame(animateFloats);
+}
+animateFloats();
+
+// ---- SCROLL REVEAL ----
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.12 });
+revealEls.forEach(el => observer.observe(el));
+
+// ---- FORM SUBMIT ----
+function handleAuditSubmit(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('.btn-audit');
+  btn.textContent = '✅ Запит надіслано!';
+  btn.style.background = '#059669';
+  setTimeout(() => {
+    btn.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Замовити безкоштовний аудит';
+    btn.style.background = '';
+    e.target.reset();
+  }, 3000);
+}
+
+// ---- RESIZE OBSERVER for canvas ----
+const resizeObserver = new ResizeObserver(() => resizeCanvas());
+resizeObserver.observe(document.body);
+</script>
+<script>
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+
+  let width, height, particles;
+  const mouse = { x: -1000, y: -1000, radius: 100 };
+  const gap = 30;
+
+  function init() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    particles = [];
+
+    for (let y = 0; y < height + gap; y += gap) {
+      for (let x = 0; x < width + gap; x += gap) {
+        particles.push({
+          x: x, y: y,
+          baseX: x, baseY: y,
+          size: 1
+        });
+      }
+    }
+  }
+
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    
+    ctx.fillStyle = 'rgba(37, 99, 235, 0.5)'; 
+
+    particles.forEach(p => {
+      let dx = mouse.x - p.x;
+      let dy = mouse.y - p.y;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < mouse.radius) {
+        let force = (mouse.radius - dist) / mouse.radius;
+        p.x -= (dx / dist) * force * 20;
+        p.y -= (dy / dist) * force * 20;
+        ctx.fillStyle = 'rgba(37, 99, 235, 0.8)';
+      } else {
+        p.x += (p.baseX - p.x) * 0.1;
+        p.y += (p.baseY - p.y) * 0.1;
+        ctx.fillStyle = 'rgba(37, 99, 235, 0.4)';
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', init);
+  init();
+  draw();
+  document.querySelectorAll('.hover-el').forEach(button => {
+  button.addEventListener('mouseenter', function(e) {
+    // Создаем элемент волны
+    const ripple = document.createElement('div');
+    ripple.classList.add('ripple-wave');
+
+    // Находим координаты курсора относительно блока
+    const rect = this.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Устанавливаем размер волны (базовый)
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    
+    // Центрируем волну в месте клика/наведения
+    ripple.style.left = x - size / 2 + 'px';
+    ripple.style.top = y - size / 2 + 'px';
+
+    // Добавляем волну в блок
+    this.appendChild(ripple);
+
+    // Удаляем элемент после завершения анимации, чтобы не мусорить в коде
+    ripple.addEventListener('animationend', () => {
+      ripple.remove();
+    });
+  });
+});
+</script>
+</body>
+</html>
